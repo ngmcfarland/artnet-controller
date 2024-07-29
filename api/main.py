@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Annotated
 from controller import ArtnetController
 from models import Node, Fixture, Preset, Transient
+import uvicorn
 import logging
 import socket
 
@@ -18,7 +19,8 @@ try:
     hostname = socket.gethostname()
     origins.extend([
         f"http://{hostname}.local",
-        f"http://{hostname}.local:5173"
+        f"http://{hostname}.local:5173",
+        f"https://{hostname}.local",
     ])
 except Exception as e:
     logger.warning(f"Failed to get hostname: {repr(e)}")
@@ -170,3 +172,7 @@ def send_preset(preset_id: Annotated[str,  Query(alias="id")]):
 def send_transient(transient: Transient):
     success = controller.send_message(fixture_id=transient.fixture_id, fade=transient.fade, values=transient.values)
     return {"success": success}
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info")
