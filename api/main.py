@@ -4,7 +4,7 @@ from typing import Annotated
 from controller import ArtnetController
 from models import Node, Fixture, Preset, Transient
 import logging
-import os
+import socket
 
 controller = ArtnetController()
 logger = logging.getLogger(__name__)
@@ -15,11 +15,14 @@ origins = [
     "http://localhost",
     "http://localhost:5173",
 ]
-if os.getenv("HOSTNAME"):
+try:
+    hostname = socket.gethostname()
     origins.extend([
-        f"http://{os.getenv('HOSTNAME')}.local",
-        f"http://{os.getenv('HOSTNAME')}.local:5173"
+        f"http://{hostname}.local",
+        f"http://{hostname}.local:5173"
     ])
+except Exception as e:
+    logger.warning(f"Failed to get hostname: {repr(e)}")
 
 app.add_middleware(
     CORSMiddleware,
