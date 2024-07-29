@@ -4,6 +4,7 @@ from typing import Annotated
 from controller import ArtnetController
 from models import Node, Fixture, Preset, Transient
 import logging
+import os
 
 controller = ArtnetController()
 logger = logging.getLogger(__name__)
@@ -14,6 +15,11 @@ origins = [
     "http://localhost",
     "http://localhost:5173",
 ]
+if os.getenv("HOSTNAME"):
+    origins.extend([
+        f"http://{os.getenv("HOSTNAME")}.local",
+        f"http://{os.getenv("HOSTNAME")}.local:5173"
+    ])
 
 app.add_middleware(
     CORSMiddleware,
