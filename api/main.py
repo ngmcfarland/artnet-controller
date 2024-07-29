@@ -17,8 +17,8 @@ origins = [
 ]
 if os.getenv("HOSTNAME"):
     origins.extend([
-        f"http://{os.getenv("HOSTNAME")}.local",
-        f"http://{os.getenv("HOSTNAME")}.local:5173"
+        f"http://{os.getenv('HOSTNAME')}.local",
+        f"http://{os.getenv('HOSTNAME')}.local:5173"
     ])
 
 app.add_middleware(
