@@ -1,0 +1,71 @@
+:root {
+  font-family: Roboto, Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* color-scheme: light dark; */
+  /* color: rgba(255, 255, 255, 0.87); */
+  /* background-color: #242424; */
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+}
+
+@media (max-width:700px)  {
+  .main-container {
+    padding-left: 2vw;
+    padding-right: 2vw;
+  }
+}
+
+@media (min-width:701px) and (max-width:1100px)  {
+  .main-container {
+    padding-left: 10vw;
+    padding-right: 10vw;
+  }
+}
+
+@media (min-width:1101px)  {
+  .main-container {
+    padding-left: 20vw;
+    padding-right: 20vw;
+  }
+}
+
+.main-paper {
+  margin-top: 20px;
+  padding-left: 30px;
+  padding-right: 30px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  min-height: 50vh;
+}
+
+.preset-button {
+  background-color: #1876D2;
+  /* width: 90%; */
+  border-radius: 5px;
+  height: 60px;
+  text-align: center;
+  padding-top: 16px;
+  margin: 5px !important;
+  cursor: pointer;
+}
+
+.preset-button:focus, .preset-button:hover {
+  filter: brightness(120%);
+}
+
+.preset-button:active {
+  filter: brightness(100%);
+}
+
+.preset-button-text {
+  font-size: 18px !important;
+}

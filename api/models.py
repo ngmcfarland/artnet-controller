@@ -77,6 +77,12 @@ class CustomRootModel(RootModel):
         return self.root
 
 
+class Color(BaseModel):
+    red: int
+    green: int
+    blue: int
+
+
 class Node(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     ip_address: str
@@ -111,6 +117,7 @@ class Fixture(BaseModel):
 class Preset(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
+    button_color: Color
     fixture_id: str
     fade: int = Field(default=0, ge=0)
     values: list[int] = []

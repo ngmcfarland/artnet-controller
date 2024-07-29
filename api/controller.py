@@ -60,50 +60,60 @@ class ArtnetController:
             f.write(self.presets.model_dump_json(indent=2))
     
     @staticmethod
-    async def _send_artnet_message(nodes: list[Node], fixture: Fixture, universes: set[int], fade: int, values: list[int]) -> None:
+    async def _send_artnet_message(nodes: list[Node], fixture: Fixture, universes: set[int], fade: int, values: list[int]) -> bool:
         try:
-            nodes = list()
-            channels = list()
+            artnet_nodes = list()
+            artnet_universes = dict()
+            artnet_channels = list()
             num_channels = len(fixture.channels)
             if len(values) < num_channels:
                 values.extend([0] * (num_channels - len(values)))
             elif len(values) > num_channels:
                 logger.warning(f"Length of values greater than number of fixture channels: {len(values)} > {num_channels}")
+                print(f"Length of values greater than number of fixture channels: {len(values)} > {num_channels}")
                 values = values[:num_channels]
             for node in nodes:
-                node_universes = dict()
-                nodes.append(ArtNetNode(ip=node.ip_address, port=node.port,
-                                        max_fps=node.max_fps, refresh_every=node.refresh_every))
+                artnet_nodes.append(ArtNetNode(ip=node.ip_address, port=node.port,
+                                               max_fps=node.max_fps, refresh_every=node.refresh_every))
                 for universe in node.universes:
                     if universe in universes:
-                        node_universes[str(universe)] = nodes[-1].add_universe(universe)
+                        artnet_universes[f"{node.ip_address}-{universe}"] = artnet_nodes[-1].add_universe(universe)
                 for address in fixture.addresses:
-                    channels.append(node_universes[str(address[0])].add_channel(start=address[1], width=num_channels))
+                    artnet_channels.append(artnet_universes[f"{node.ip_address}-{address[0]}"].add_channel(start=address[1], width=num_channels))
             if fade <= 0:
-                for c in channels:
+                print(f"Setting values on {len(artnet_channels)} channels: {values}")
+                for c in artnet_channels:
                     try:
                         c.set_values(values)
                     except Exception:
-                        logger.error(message=f"Failed to set values for channel {c}", level="error")
-                await asyncio.sleep(0.001)
+                        logger.error(f"Failed to set values for channel {c}")
+                        print(f"Failed to set values for channel {c}")
+                await asyncio.sleep(0.01)
             else:
-                for c in channels:
+                for c in artnet_channels:
                     try:
                         c.add_fade(values, fade)
                     except Exception:
-                        logger.error(message=f"Failed to add fade for channel {c}", level="error")
-                await channels[-1]
+                        logger.error(f"Failed to add fade for channel {c}")
+                        print(f"Failed to add fade for channel {c}")
+                await artnet_channels[-1]
+            return True
         except Exception as e:
-            logger.error(message=f"Error when trying to send async Artnet message: {repr(e)}", level="error")
+            logger.error(f"Error when trying to send async Artnet message: {repr(e)}")
+            print(f"Error when trying to send async Artnet message: {repr(e)}")
+            return False
         
-    def send_message(self, fixture_id: str, fade: int, values: list[int]) -> None:
+    def send_message(self, fixture_id: str, fade: int, values: list[int]) -> bool:
+        print("Inside send_message")
         fixture = self.fixtures.get(fixture_id, None)
         if fixture is None:
             logger.error(f"Failed to find fixture with id {fixture_id}")
+            print(f"Failed to find fixture with id {fixture_id}")
             return
         universes = set(address[0] for address in fixture.addresses)
-        nodes = [node for node in self.nodes if any(set(node.universes).intersection(universes))]
+        nodes = [node for node in self.nodes if set(node.universes).intersection(universes)]
         if not nodes:
             logger.error(f"Failed to find nodes with matching universes: {universes}")
+            print(f"Failed to find nodes with matching universes: {universes}")
             return
-        asyncio.run(self._send_artnet_message(nodes=nodes, fixture=fixture, universes=universes, fade=fade, values=values))
+        return asyncio.run(self._send_artnet_message(nodes=nodes, fixture=fixture, universes=universes, fade=fade, values=values))
