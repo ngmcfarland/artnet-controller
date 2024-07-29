@@ -1,5 +1,5 @@
 from models import Nodes, Fixtures, Presets, Node, Fixture
-from pyartnet import ArtNetNode
+from pyartnet import ArtNetNode, output_correction
 from pathlib import Path
 import logging
 import asyncio
@@ -77,7 +77,14 @@ class ArtnetController:
                                                max_fps=node.max_fps, refresh_every=node.refresh_every))
                 for universe in node.universes:
                     if universe in universes:
-                        artnet_universes[f"{node.ip_address}-{universe}"] = artnet_nodes[-1].add_universe(universe)
+                        universe_key = f"{node.ip_address}-{universe}"
+                        artnet_universes[universe_key] = artnet_nodes[-1].add_universe(universe)
+                        if node.output_correction == "quadratic":
+                            artnet_universes[universe_key].set_output_correction(output_correction.quadratic)
+                        elif node.output_correction == "cubic":
+                            artnet_universes[universe_key].set_output_correction(output_correction.cubic)
+                        elif node.output_correction == "quadruple":
+                            artnet_universes[universe_key].set_output_correction(output_correction.quadruple)
                 for address in fixture.addresses:
                     artnet_channels.append(artnet_universes[f"{node.ip_address}-{address[0]}"].add_channel(start=address[1], width=num_channels))
             if fade <= 0:
@@ -88,7 +95,7 @@ class ArtnetController:
                     except Exception:
                         logger.error(f"Failed to set values for channel {c}")
                         print(f"Failed to set values for channel {c}")
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.001)
             else:
                 for c in artnet_channels:
                     try:
