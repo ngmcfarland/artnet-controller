@@ -14,6 +14,7 @@ app = FastAPI()
 origins = [
     "http://localhost",
     "http://localhost:5173",
+    "http://localhost:4173",
 ]
 try:
     hostname = socket.gethostname()
@@ -65,14 +66,14 @@ async def update_node(node: Node):
 
 
 @app.delete("/api/nodes")
-async def remove_node(node: Node):
+async def remove_node(node_id: Annotated[str,  Query(alias="id")]):
     try:
-        del controller.nodes[node.id]
+        del controller.nodes[node_id]
         controller.persist_nodes()
     except KeyError as e:
         logger.error(f"Failed to delete node: {repr(e)}")
         return HTTPException(status_code=403, detail=f"Failed to delete node: {repr(e)}")
-    return {"success": True, "id": node.id}
+    return {"success": True, "id": node_id}
 
 
 # --- Fixtures CRUD ---
@@ -106,14 +107,14 @@ async def update_fixture(fixture: Fixture):
 
 
 @app.delete("/api/fixtures")
-async def remove_fixture(fixture: Fixture):
+async def remove_fixture(fixture_id: Annotated[str,  Query(alias="id")]):
     try:
-        del controller.fixtures[fixture.id]
+        del controller.fixtures[fixture_id]
         controller.persist_fixtures()
     except KeyError as e:
         logger.error(f"Failed to delete fixture: {repr(e)}")
         return HTTPException(status_code=403, detail=f"Failed to delete fixture: {repr(e)}")
-    return {"success": True, "id": fixture.id}
+    return {"success": True, "id": fixture_id}
 
 
 # --- Presets CRUD ---
@@ -147,14 +148,14 @@ async def update_preset(preset: Preset):
 
 
 @app.delete("/api/presets")
-async def remove_preset(preset: Preset):
+async def remove_preset(preset_id: Annotated[str,  Query(alias="id")]):
     try:
-        del controller.presets[preset.id]
+        del controller.presets[preset_id]
         controller.persist_presets()
     except KeyError as e:
         logger.error(f"Failed to delete preset: {repr(e)}")
         return HTTPException(status_code=403, detail=f"Failed to delete preset: {repr(e)}")
-    return {"success": True, "id": preset.id}
+    return {"success": True, "id": preset_id}
 
 
 # --- Sending Artnet Messages ---

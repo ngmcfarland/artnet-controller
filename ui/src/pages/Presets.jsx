@@ -54,7 +54,7 @@ export default function Presets() {
   const handlePresetClick = (preset) => {
     // If in edit mode, go to editPreset page otherwise send preset
     if (editMode) {
-      navigate("/editPreset", { state: { id: preset.id } });
+      navigate("/editPreset", { state: { preset: preset } });
     } else {
       fetch(apiBase + "/sendPreset?id=" + preset.id, {
         method: "POST",
@@ -120,13 +120,17 @@ export default function Presets() {
                         sx={{
                           backgroundColor: `rgb(${preset.button_color.red}, ${preset.button_color.green}, ${preset.button_color.blue})`,
                           boxShadow: 2,
-                          display: "flex",
-                          justifyContent: "center"
+                          paddingTop: preset.name ? "10px" : "18px",
                         }}
                         onClick={() => handlePresetClick(preset)}
                       >
-                        <Typography className="preset-button-text" sx={{color: getTextColor(preset.button_color)}}>{preset.name}</Typography>
-                        { editMode ? <EditIcon sx={{color: getTextColor(preset.button_color), marginLeft: "5px"}} /> : null }
+                        <Box sx={{display: "flex", justifyContent: "center"}}>
+                          <Typography className="preset-button-text" sx={{color: getTextColor(preset.button_color)}}>{preset.name || preset.effect_name}</Typography>
+                          { editMode ? <EditIcon sx={{color: getTextColor(preset.button_color), marginLeft: "5px"}} /> : null }
+                        </Box>
+                        <Box sx={{display: "flex", justifyContent: "center"}}>
+                          <Typography className="preset-button-sub-text" sx={{color: getTextColor(preset.button_color)}}>{preset.name ? preset.effect_name : ""}</Typography>
+                        </Box>
                       </Box>
                     </Grid>
                   )

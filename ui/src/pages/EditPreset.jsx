@@ -1,9 +1,11 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Typography, Grid } from '@mui/material';
+import Alert from '@mui/material/Alert';
 import Slider from '@mui/material/Slider';
 import Select from '@mui/material/Select';
 import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
@@ -11,7 +13,7 @@ import MenuItem from '@mui/material/MenuItem';
 import { styled } from '@mui/material/styles';
 import Paper from '@mui/material/Paper';
 import Wheel from '@uiw/react-color-wheel';
-import { hsvaToHex } from '@uiw/color-convert';
+import { hsvaToHex, rgbaToHsva, hsvaToRgba } from '@uiw/color-convert';
 
 import MainAppBar from '../components/AppBar.jsx';
 import { apiBase } from '../Context';
@@ -37,16 +39,59 @@ const GradientSlider = styled(Slider)(({ colora, colorb }) => ({
 }));
 
 
+const getHSVAFromValues = (values) => {
+  if (values) {
+    return rgbaToHsva({r: values[1], g: values[2], b: values[3], a: 1})
+  } else {
+    return {h: 0, s: 100, v: 75, a: 1}
+  }
+}
+
+
+const normalizeValue = (value, defaultValue) => {
+  if (value == null) {
+    return defaultValue;
+  } else {
+    return parseInt(100 * value / 255.0);
+  }
+}
+
+const denormalizeValue = (value) => {
+  return parseInt(255 * value / 100.0);
+}
+
+//colorChannelA and colorChannelB are ints ranging from 0 to 255
+function colorChannelMixer(colorChannelA, colorChannelB, amountToMix){
+  var channelA = colorChannelA*amountToMix;
+  var channelB = colorChannelB*(1-amountToMix);
+  return parseInt(channelA+channelB);
+}
+//rgbA and rgbB are arrays, amountToMix ranges from 0.0 to 1.0
+//example (red): rgbA = {r: 255, g: 0, b: 0}
+function colorMixer(rgbA, rgbB, master, amountToMix = 0.5){
+  var m = master / 100.0;
+  var r = colorChannelMixer(rgbA.r, rgbB.r, amountToMix);
+  var g = colorChannelMixer(rgbA.g, rgbB.g, amountToMix);
+  var b = colorChannelMixer(rgbA.b, rgbB.b, amountToMix);
+  return {r: parseInt(m * r), g: parseInt(m * g), b: parseInt(m * b)};
+}
+
+
 export default function EditPreset() {
   const navigate = useNavigate();
+  const {state} = useLocation();
+  const { preset } = state;
   const [fixtureId, setFixtureId] = React.useState("ef37f423-6214-46da-99a7-36f659feacb4");  // Hard-coded for now
   const [fixture, setFixture] = React.useState();
   const [effects, setEffects] = React.useState([]);
-  const [selectedEffect, setSelectedEffect] = React.useState("0");
-  const [hsva, setHsva] = React.useState({ h: 0, s: 100, v: 75, a: 1 });
-  const [white, setWhite] = React.useState(0);
-  const [adjustA, setAdjustA] = React.useState(0);
-  const [adjustB, setAdjustB] = React.useState(0);
+  const [selectedEffect, setSelectedEffect] = React.useState(preset?.values[5].toString() || "0");
+  const [hsva, setHsva] = React.useState(getHSVAFromValues(preset?.values));
+  const [master, setMaster] = React.useState(normalizeValue(preset?.values[0], 75));
+  const [white, setWhite] = React.useState(normalizeValue(preset?.values[4], 0));
+  const [adjustA, setAdjustA] = React.useState(normalizeValue(preset?.values[6], 0));
+  const [adjustB, setAdjustB] = React.useState(normalizeValue(preset?.values[7], 0));
+  const [presetName, setPresetName] = React.useState(preset?.name || "");
+  const [errorMessage, setErrorMessage] = React.useState("");
 
   React.useEffect(() => {
     fetch(`${apiBase}/fixtures?id=${fixtureId}`)
@@ -65,15 +110,109 @@ export default function EditPreset() {
       );
   }, [fixtureId]);
 
+  React.useEffect(() => {
+    // Temporarily show error alert
+    let interval = undefined;
+    if (errorMessage != "") {
+      interval = setInterval(() => {
+        setErrorMessage("");
+      }, 5000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [errorMessage]);
+
+  const onSave = () => {
+    let data = preset || {};
+    let rgba = hsvaToRgba(hsva);
+    let w = hsvaToRgba({h: 25, s: 15, v: white, a: 1});
+    let mixAmount = (white / 100.0 - hsva.v / 100.0) / 2.0 + 0.5;
+    let mixed = colorMixer(w, rgba, master, mixAmount);
+    data.name = presetName;
+    data.effect_name = effects[selectedEffect].name;
+    data.button_color = {
+      red: mixed.r,
+      green: mixed.g,
+      blue: mixed.b
+    };
+    data.fixture_id = fixtureId;
+    data.fade = 0;
+    data.values = [
+      denormalizeValue(master),
+      rgba.r,
+      rgba.g,
+      rgba.b,
+      denormalizeValue(white),
+      parseInt(selectedEffect),
+      denormalizeValue(adjustA),
+      denormalizeValue(adjustB)
+    ]
+    console.log(data);
+    fetch(`${apiBase}/presets`, {
+      method: preset ? "PUT" : "POST",
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(
+      (result) => {
+        console.log(result);
+        if (result.success) {
+          navigate("/presets");
+        } else {
+          setErrorMessage("Failed to save preset!");
+        }
+      },
+      (error) => {
+        console.log(error);
+        setErrorMessage(`Unknown Error: ${error}`);
+      }
+    )
+  };
+
+  const onDelete = () => {
+    if (preset) {
+      fetch(`${apiBase}/presets?id=${preset.id}`, {
+        method: "DELETE",
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(res => res.json())
+      .then(
+        (result) => {
+          console.log(result);
+          if (result.success) {
+            navigate("/presets");
+          } else {
+            setErrorMessage("Failed to delete preset!");
+          }
+        },
+        (error) => {
+          console.log(error);
+          setErrorMessage(`Unknown Error: ${error}`);
+        }
+      )
+    }
+  };
+
   return (
     <>
       <MainAppBar isSettings={false} />
       <div className="main-container">
+        {errorMessage != "" ? <Alert severity="error" sx={{marginTop: "10px"}}>{errorMessage}</Alert> : null}
         <Paper className="main-paper" sx={{padding: "30px"}}>
           <Typography variant='h5'>Edit Preset</Typography>
           <Grid container sx={{marginTop: "20px"}}>
             <Box sx={{ width: '100%', height: 50, background: hsvaToHex(hsva), position: "relative", borderRadius: "5px", boxShadow: 2,}}>
               <Box sx={{position: "absolute", background: `rgba(255, 232, 216, ${(white * 0.7) / 100.0})`, width: '100%', height: 50, borderRadius: "5px"}}></Box>
+              <Box sx={{position: "absolute", background: `rgba(0, 0, 0, ${1 - master / 100.0})`, width: '100%', height: 50, borderRadius: "5px"}}></Box>
             </Box>
           </Grid>
           <Grid container sx={{marginTop: "40px"}}>
@@ -81,6 +220,20 @@ export default function EditPreset() {
               <Grid container>
                 <Grid item xs={4} sm={3} md={4} lg={3}>
                   <Typography variant="body1" sx={{marginTop: "10px"}}>Brightness</Typography>
+                </Grid>
+                <Grid item xs={8} sm={9} md={8} lg={9}>
+                  <GradientSlider
+                    colora={"black"}
+                    colorb={"white"}
+                    value={master}
+                    onChange={(event, newValue) => setMaster(newValue)}
+                    color="secondary"
+                  />
+                </Grid>
+              </Grid>
+              <Grid container>
+                <Grid item xs={4} sm={3} md={4} lg={3}>
+                  <Typography variant="body1" sx={{marginTop: "10px"}}>Saturation</Typography>
                 </Grid>
                 <Grid item xs={8} sm={9} md={8} lg={9}>
                   <GradientSlider
@@ -165,9 +318,27 @@ export default function EditPreset() {
               </Grid>
             </Grid>
           </Grid>
-          <Grid container sx={{justifyContent: "flex-end"}}>
-            <Button color="secondary" onClick={() => navigate("/presets")} sx={{marginRight: "10px"}}>Cancel</Button>
-            <Button variant="contained" sx={{marginRight: "10px"}}>Save</Button>
+          <Grid container sx={{marginTop: 2}}>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <TextField 
+                  label="Preset Name"
+                  variant="outlined"
+                  helperText="Optional"
+                  value={presetName}
+                  onChange={(event) => setPresetName(event.target.value)}
+                />
+              </FormControl>
+            </Grid>
+          </Grid>
+          <Grid container sx={{marginTop: 2}}>
+            <Grid item xs={6}>
+              {preset ? <Button color="error" variant="outlined" onClick={onDelete}>Delete</Button> : null}
+            </Grid>
+            <Grid item xs={6} sx={{display: "flex", justifyContent: "flex-end"}}>
+              <Button color="secondary" onClick={() => navigate("/presets")} sx={{marginRight: "10px"}}>Cancel</Button>
+              <Button variant="contained" onClick={onSave} sx={{marginRight: "10px"}}>Save</Button>
+            </Grid>
           </Grid>
         </Paper>
       </div>

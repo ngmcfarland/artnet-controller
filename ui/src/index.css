@@ -48,9 +48,9 @@ body {
   background-color: #1876D2;
   /* width: 90%; */
   border-radius: 5px;
-  height: 60px;
+  height: 64px;
   text-align: center;
-  padding-top: 16px;
+  padding-top: 10px;
   margin: 5px !important;
   cursor: pointer;
 }
@@ -65,4 +65,8 @@ body {
 
 .preset-button-text {
   font-size: 18px !important;
+}
+
+.preset-button-sub-text {
+  font-size: 12px !important;
 }
