@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Annotated
 from controller import ArtnetController
 from models import Node, Fixture, Preset, Transient
+import subprocess
 import uvicorn
 import logging
 import socket
@@ -25,6 +26,17 @@ try:
     ])
 except Exception as e:
     logger.warning(f"Failed to get hostname: {repr(e)}")
+try:
+    output = subprocess.run(["hostname", "-I"], capture_output=True, text=True)
+    ip_address = output.split(" ")[0]
+    if len(ip_address.split(".")) == 4:
+        origins.extend([
+            f"http://{ip_address}",
+            f"http://{ip_address}:5173",
+            f"https://{ip_address}"
+        ])
+except Exception as e:
+    logger.warning(f"Failed to get IP address: {repr(e)}")
 
 app.add_middleware(
     CORSMiddleware,
