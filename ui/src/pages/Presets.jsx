@@ -100,7 +100,7 @@ export default function Presets() {
                 </>
               ) : (
                 <Grid item xs={9} sx={{textAlign: "right"}}>
-                  <Button variant="outlined" startIcon={<EditIcon />} sx={{marginRight: "10px"}} onClick={() => setEditMode(true)}>Edit</Button>
+                  <Button variant="outlined" color="secondary" startIcon={<EditIcon />} sx={{marginRight: "10px"}} onClick={() => setEditMode(true)}>Edit</Button>
                   <Button variant="contained" color="success" onClick={() => navigate("/editPreset", { state: { id: undefined } })}>+ Add Preset</Button>
                 </Grid>
               )

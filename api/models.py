@@ -97,6 +97,8 @@ class Node(BaseModel):
 class DiscreteOption(BaseModel):
     name: str
     value: int
+    disabled_channels: list[int] = []
+    # css_effect - future
 
 
 class ArtnetChannel(BaseModel):

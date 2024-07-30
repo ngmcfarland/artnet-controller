@@ -37,9 +37,9 @@ export default function MainAppBar({ isSettings }) {
           <IconButton sx={{ ml: 1 }} onClick={colorMode.toggleColorMode} color="default">
             {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <ModeNightIcon />}
           </IconButton>
-          <IconButton aria-label="open settings" color="secondary" onClick={handleButtonClick}>
+          {/* <IconButton aria-label="open settings" color="secondary" onClick={handleButtonClick}>
             { isSettings ? <HomeIcon /> : <SettingsIcon /> }
-          </IconButton>
+          </IconButton> */}
         </Toolbar>
       </AppBar>
     </Box>
