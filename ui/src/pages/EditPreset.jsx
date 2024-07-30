@@ -264,11 +264,11 @@ export default function EditPreset() {
                   <Box sx={{position: "absolute", background: `rgba(0, 0, 0, ${1 - master / 100.0})`, width: '100%', height: 50, borderRadius: "5px"}}></Box>
                 </Box>
               </Grid>
-              <Grid container sx={{marginTop: "40px"}}>
+              <Grid container sx={{marginTop: 3}}>
                 <Grid item xs={12} md={7} sx={{padding: "20px 10px"}}>
                   <Grid container>
                     <Grid item xs={4} sm={3} md={4} lg={3}>
-                      <Typography variant="body1" sx={{marginTop: "10px"}}>Brightness</Typography>
+                      <Typography variant="body1" sx={{marginTop: 1.5}}>Brightness</Typography>
                     </Grid>
                     <Grid item xs={8} sm={9} md={8} lg={9}>
                       <GradientSlider
@@ -282,7 +282,7 @@ export default function EditPreset() {
                   </Grid>
                   <Grid container>
                     <Grid item xs={4} sm={3} md={4} lg={3}>
-                      <Typography variant="body1" sx={{marginTop: "10px"}}>Saturation</Typography>
+                      <Typography variant="body1" sx={{marginTop: 1.5}}>Saturation</Typography>
                     </Grid>
                     <Grid item xs={8} sm={9} md={8} lg={9}>
                       <GradientSlider
@@ -296,7 +296,7 @@ export default function EditPreset() {
                   </Grid>
                   <Grid container>
                     <Grid item xs={4} sm={3} md={4} lg={3}>
-                      <Typography variant="body1" sx={{marginTop: "10px"}}>Warm White</Typography>
+                      <Typography variant="body1" sx={{marginTop: 1.5}}>Warm White</Typography>
                     </Grid>
                     <Grid item xs={8} sm={9} md={8} lg={9}>
                       <GradientSlider
@@ -334,9 +334,9 @@ export default function EditPreset() {
                   <Grid container>
                     <Grid item xs={4} sm={3} md={4} lg={3}>
                       <Typography variant="body1" sx={{
-                        marginTop: "10px",
+                        marginTop: 1.5,
                         opacity: (effects.length > 0 && !effects[parseInt(selectedEffect)].disabled_channels.includes(6)) ? 1 : 0.2
-                      }}>Effect Adjust 1</Typography>
+                      }}>Adjust 1</Typography>
                     </Grid>
                     <Grid item xs={8} sm={9} md={8} lg={9}>
                       <Slider
@@ -351,9 +351,9 @@ export default function EditPreset() {
                   <Grid container>
                     <Grid item xs={4} sm={3} md={4} lg={3}>
                       <Typography variant="body1" sx={{
-                        marginTop: "10px",
+                        marginTop: 1.5,
                         opacity: (effects.length > 0 && !effects[parseInt(selectedEffect)].disabled_channels.includes(7)) ? 1 : 0.2
-                      }}>Effect Adjust 2</Typography>
+                      }}>Adjust 2</Typography>
                     </Grid>
                     <Grid item xs={8} sm={9} md={8} lg={9}>
                       <Slider
