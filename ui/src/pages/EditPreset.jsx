@@ -146,6 +146,7 @@ export default function EditPreset() {
             denormalizeValue(adjustB)
           ]
         };
+        console.log(transient);
         fetch(`${apiBase}/sendTransient`, {
           method: "POST",
           headers: {
@@ -178,7 +179,7 @@ export default function EditPreset() {
     let mixAmount = (white / 100.0 - hsva.v / 100.0) / 2.0 + 0.5;
     let mixed = colorMixer(w, rgba, master, mixAmount);
     data.name = presetName;
-    data.effect_name = effects[selectedEffect].name;
+    data.effect_name = effects[parseInt(selectedEffect)].name;
     data.button_color = {
       red: mixed.r,
       green: mixed.g,
