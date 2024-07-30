@@ -78,7 +78,7 @@ function colorMixer(rgbA, rgbB, master, amountToMix = 0.5){
 
 
 export default function EditPreset() {
-  const transientTimeout = 500;
+  const transientTimeout = 250;
   const navigate = useNavigate();
   const {state} = useLocation();
   const { preset } = state;
