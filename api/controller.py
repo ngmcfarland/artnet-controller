@@ -1,6 +1,8 @@
 from models import Nodes, Fixtures, Presets, Node, Fixture
 from pyartnet import ArtNetNode, output_correction
+from datetime import datetime, timedelta
 from pathlib import Path
+import threading
 import logging
 import asyncio
 import os
@@ -19,6 +21,11 @@ class ArtnetController:
 
     def __init__(self):
         logger.debug("Initializing Artnet Controller...")
+        self.lights_off = {
+            "hour": 3,
+            "minute": 0
+        }
+        self.threads = list()
         data_folder = current_directory / "data"
         if not data_folder.exists():
             os.mkdir(data_folder)
@@ -46,6 +53,8 @@ class ArtnetController:
         else:
             with open(self.presets_file, 'r') as f:
                 self.presets = Presets.model_validate_json(f.read())
+        
+        self.schedule_next_turn_off()
     
     def persist_nodes(self):
         with open(self.nodes_file, 'w') as f:
@@ -88,7 +97,6 @@ class ArtnetController:
                 for address in fixture.addresses:
                     artnet_channels.append(artnet_universes[f"{node.ip_address}-{address[0]}"].add_channel(start=address[1], width=num_channels))
             if fade <= 0:
-                print(f"Setting values on {len(artnet_channels)} channels: {values}")
                 for c in artnet_channels:
                     try:
                         c.set_values(values)
@@ -111,7 +119,6 @@ class ArtnetController:
             return False
         
     def send_message(self, fixture_id: str, fade: int, values: list[int]) -> bool:
-        print("Inside send_message")
         fixture = self.fixtures.get(fixture_id, None)
         if fixture is None:
             logger.error(f"Failed to find fixture with id {fixture_id}")
@@ -124,3 +131,27 @@ class ArtnetController:
             print(f"Failed to find nodes with matching universes: {universes}")
             return
         return asyncio.run(self._send_artnet_message(nodes=nodes, fixture=fixture, universes=universes, fade=fade, values=values))
+
+    def turn_lights_off(self, scheduled: bool = False) -> None:
+        """
+        Send all zeroes to all fixtures on all nodes.
+        """
+        for fixture in self.fixtures:
+            print(f"Sending zeroes to fixture: {fixture.id}")
+            success = self.send_message(fixture_id=fixture.id,
+                                        fade=0,
+                                        values=[0] * len(fixture.channels))
+            print(f"Success: {success}")
+        if scheduled:
+            self.schedule_next_turn_off()
+    
+    def schedule_next_turn_off(self) -> None:
+        self.threads = list()
+        target = datetime.now().replace(hour=self.lights_off['hour'], minute=self.lights_off['minute'], second=0, microsecond=0)
+        if datetime.now() >= target:
+            target += timedelta(days=1)
+        print(f"Scheduling lights off for {target.isoformat()}")
+        t = threading.Timer(interval=(target-datetime.now()).total_seconds(),
+                            function=self.turn_lights_off, args=(True,))
+        self.threads.append(t)
+        t.start()

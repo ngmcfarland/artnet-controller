@@ -78,10 +78,12 @@ function colorMixer(rgbA, rgbB, master, amountToMix = 0.5){
 
 
 export default function EditPreset() {
+  const transientTimeout = 500;
   const navigate = useNavigate();
   const {state} = useLocation();
   const { preset } = state;
-  const [fixtureId, setFixtureId] = React.useState("ef37f423-6214-46da-99a7-36f659feacb4");  // Hard-coded for now
+  const [dataLoaded, setDataLoaded] = React.useState(false);
+  const fixtureId = preset?.fixtureId || "ef37f423-6214-46da-99a7-36f659feacb4";  // Hard-coded for now
   const [fixture, setFixture] = React.useState();
   const [effects, setEffects] = React.useState([]);
   const [selectedEffect, setSelectedEffect] = React.useState(preset?.values[5].toString() || "0");
@@ -103,6 +105,7 @@ export default function EditPreset() {
             setEffects(result.channels[5].options);
           }
           setFixture(result);
+          setDataLoaded(true);
         },
         (error) => {
           console.log(error);
@@ -123,6 +126,50 @@ export default function EditPreset() {
       if (interval) clearInterval(interval);
     };
   }, [errorMessage]);
+
+  React.useEffect(() => {
+    // Send a transient message but only after a timeout
+    if (dataLoaded) {
+      const timeoutId = setTimeout(() => {
+        let rgba = hsvaToRgba(hsva);
+        let transient = {
+          fixture_id: fixtureId,
+          fade: 0,
+          values: [
+            denormalizeValue(master),
+            rgba.r,
+            rgba.g,
+            rgba.b,
+            denormalizeValue(white),
+            parseInt(selectedEffect),
+            denormalizeValue(adjustA),
+            denormalizeValue(adjustB)
+          ]
+        };
+        fetch(`${apiBase}/sendTransient`, {
+          method: "POST",
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(transient)
+        })
+        .then(res => res.json())
+        .then(
+          (result) => {
+            if (!result.success) {
+              setErrorMessage("Failed to send transient update!");
+            }
+          },
+          (error) => {
+            console.log(error);
+            setErrorMessage(`Unknown Error: ${error}`);
+          }
+        )
+      }, transientTimeout);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [dataLoaded, hsva, fixtureId, master, white, selectedEffect, adjustA, adjustB]);
 
   const onSave = () => {
     let data = preset || {};
@@ -148,7 +195,7 @@ export default function EditPreset() {
       parseInt(selectedEffect),
       denormalizeValue(adjustA),
       denormalizeValue(adjustB)
-    ]
+    ];
     console.log(data);
     fetch(`${apiBase}/presets`, {
       method: preset ? "PUT" : "POST",
@@ -208,138 +255,144 @@ export default function EditPreset() {
       <div className="main-container">
         {errorMessage != "" ? <Alert severity="error" sx={{marginTop: "10px"}}>{errorMessage}</Alert> : null}
         <Paper className="main-paper" sx={{padding: "30px"}}>
-          <Typography variant='h5'>Edit Preset</Typography>
-          <Grid container sx={{marginTop: "20px"}}>
-            <Box sx={{ width: '100%', height: 50, background: hsvaToHex(hsva), position: "relative", borderRadius: "5px", boxShadow: 2,}}>
-              <Box sx={{position: "absolute", background: `rgba(255, 232, 216, ${(white * 0.7) / 100.0})`, width: '100%', height: 50, borderRadius: "5px"}}></Box>
-              <Box sx={{position: "absolute", background: `rgba(0, 0, 0, ${1 - master / 100.0})`, width: '100%', height: 50, borderRadius: "5px"}}></Box>
-            </Box>
-          </Grid>
-          <Grid container sx={{marginTop: "40px"}}>
-            <Grid item xs={12} md={7} sx={{padding: "20px 10px"}}>
-              <Grid container>
-                <Grid item xs={4} sm={3} md={4} lg={3}>
-                  <Typography variant="body1" sx={{marginTop: "10px"}}>Brightness</Typography>
+          {dataLoaded ? (
+            <>
+              <Typography variant='h5'>Edit Preset</Typography>
+              <Grid container sx={{marginTop: "20px"}}>
+                <Box sx={{ width: '100%', height: 50, background: hsvaToHex(hsva), position: "relative", borderRadius: "5px", boxShadow: 2,}}>
+                  <Box sx={{position: "absolute", background: `rgba(255, 232, 216, ${(white * 0.7) / 100.0})`, width: '100%', height: 50, borderRadius: "5px"}}></Box>
+                  <Box sx={{position: "absolute", background: `rgba(0, 0, 0, ${1 - master / 100.0})`, width: '100%', height: 50, borderRadius: "5px"}}></Box>
+                </Box>
+              </Grid>
+              <Grid container sx={{marginTop: "40px"}}>
+                <Grid item xs={12} md={7} sx={{padding: "20px 10px"}}>
+                  <Grid container>
+                    <Grid item xs={4} sm={3} md={4} lg={3}>
+                      <Typography variant="body1" sx={{marginTop: "10px"}}>Brightness</Typography>
+                    </Grid>
+                    <Grid item xs={8} sm={9} md={8} lg={9}>
+                      <GradientSlider
+                        colora={"black"}
+                        colorb={"white"}
+                        value={master}
+                        onChange={(event, newValue) => setMaster(newValue)}
+                        color="secondary"
+                      />
+                    </Grid>
+                  </Grid>
+                  <Grid container>
+                    <Grid item xs={4} sm={3} md={4} lg={3}>
+                      <Typography variant="body1" sx={{marginTop: "10px"}}>Saturation</Typography>
+                    </Grid>
+                    <Grid item xs={8} sm={9} md={8} lg={9}>
+                      <GradientSlider
+                        colora={"black"}
+                        colorb={hsvaToHex({h: hsva.h, s: hsva.s, v: 100, a: 1})}
+                        value={hsva.v}
+                        onChange={(event, newValue) => setHsva({...hsva, v: newValue})}
+                        color="secondary"
+                      />
+                    </Grid>
+                  </Grid>
+                  <Grid container>
+                    <Grid item xs={4} sm={3} md={4} lg={3}>
+                      <Typography variant="body1" sx={{marginTop: "10px"}}>Warm White</Typography>
+                    </Grid>
+                    <Grid item xs={8} sm={9} md={8} lg={9}>
+                      <GradientSlider
+                        colora={"black"}
+                        colorb={"rgb(255, 232, 216)"}
+                        value={white}
+                        onChange={(event, newValue) => setWhite(newValue)}
+                        color="secondary"
+                      />
+                    </Grid>
+                  </Grid>
                 </Grid>
-                <Grid item xs={8} sm={9} md={8} lg={9}>
-                  <GradientSlider
-                    colora={"black"}
-                    colorb={"white"}
-                    value={master}
-                    onChange={(event, newValue) => setMaster(newValue)}
-                    color="secondary"
-                  />
+                <Grid item xs={12} md={5} sx={{display: "flex", justifyContent: "center"}}>
+                  <Wheel color={hsva} onChange={(color) => setHsva({ ...hsva, ...color.hsva })} />
                 </Grid>
               </Grid>
-              <Grid container>
-                <Grid item xs={4} sm={3} md={4} lg={3}>
-                  <Typography variant="body1" sx={{marginTop: "10px"}}>Saturation</Typography>
+              <Grid container sx={{marginTop: "40px"}}>
+                <Grid item xs={12} md={5} sx={{paddingRight: 4, paddingTop: "15px", paddingBottom: "30px"}}>
+                  <FormControl fullWidth>
+                    <InputLabel id="demo-simple-select-standard-label">Effect</InputLabel>
+                    <Select
+                      labelId="effect-select-label"
+                      id="effect-select"
+                      value={selectedEffect}
+                      label="Effect"
+                      onChange={(event) => setSelectedEffect(event.target.value)}
+                    >
+                      {effects.map((effect, effectIdx) => {
+                        return <MenuItem value={effectIdx.toString()} key={effectIdx}>{effect.name}</MenuItem>
+                      })}
+                    </Select>
+                  </FormControl>
                 </Grid>
-                <Grid item xs={8} sm={9} md={8} lg={9}>
-                  <GradientSlider
-                    colora={"black"}
-                    colorb={hsvaToHex({h: hsva.h, s: hsva.s, v: 100, a: 1})}
-                    value={hsva.v}
-                    onChange={(event, newValue) => setHsva({...hsva, v: newValue})}
-                    color="secondary"
-                  />
-                </Grid>
-              </Grid>
-              <Grid container>
-                <Grid item xs={4} sm={3} md={4} lg={3}>
-                  <Typography variant="body1" sx={{marginTop: "10px"}}>Warm White</Typography>
-                </Grid>
-                <Grid item xs={8} sm={9} md={8} lg={9}>
-                  <GradientSlider
-                    colora={"black"}
-                    colorb={"rgb(255, 232, 216)"}
-                    value={white}
-                    onChange={(event, newValue) => setWhite(newValue)}
-                    color="secondary"
-                  />
-                </Grid>
-              </Grid>
-            </Grid>
-            <Grid item xs={12} md={5} sx={{display: "flex", justifyContent: "center"}}>
-              <Wheel color={hsva} onChange={(color) => setHsva({ ...hsva, ...color.hsva })} />
-            </Grid>
-          </Grid>
-          <Grid container sx={{marginTop: "40px"}}>
-            <Grid item xs={12} md={5} sx={{paddingRight: 4, paddingTop: "15px", paddingBottom: "30px"}}>
-              <FormControl fullWidth>
-                <InputLabel id="demo-simple-select-standard-label">Effect</InputLabel>
-                <Select
-                  labelId="effect-select-label"
-                  id="effect-select"
-                  value={selectedEffect}
-                  label="Effect"
-                  onChange={(event) => setSelectedEffect(event.target.value)}
-                >
-                  {effects.map((effect, effectIdx) => {
-                    return <MenuItem value={effectIdx.toString()} key={effectIdx}>{effect.name}</MenuItem>
-                  })}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={7}>
-              <Grid container>
-                <Grid item xs={4} sm={3} md={4} lg={3}>
-                  <Typography variant="body1" sx={{
-                    marginTop: "10px",
-                    opacity: (effects.length > 0 && !effects[parseInt(selectedEffect)].disabled_channels.includes(6)) ? 1 : 0.2
-                  }}>Effect Adjust 1</Typography>
-                </Grid>
-                <Grid item xs={8} sm={9} md={8} lg={9}>
-                  <Slider
-                    value={adjustA}
-                    onChange={(event, newValue) => setAdjustA(newValue)}
-                    color="primary"
-                    sx={{marginTop: "7px"}}
-                    disabled={!(effects.length > 0 && !effects[parseInt(selectedEffect)].disabled_channels.includes(6))}
-                  />
+                <Grid item xs={12} md={7}>
+                  <Grid container>
+                    <Grid item xs={4} sm={3} md={4} lg={3}>
+                      <Typography variant="body1" sx={{
+                        marginTop: "10px",
+                        opacity: (effects.length > 0 && !effects[parseInt(selectedEffect)].disabled_channels.includes(6)) ? 1 : 0.2
+                      }}>Effect Adjust 1</Typography>
+                    </Grid>
+                    <Grid item xs={8} sm={9} md={8} lg={9}>
+                      <Slider
+                        value={adjustA}
+                        onChange={(event, newValue) => setAdjustA(newValue)}
+                        color="primary"
+                        sx={{marginTop: "7px"}}
+                        disabled={!(effects.length > 0 && !effects[parseInt(selectedEffect)].disabled_channels.includes(6))}
+                      />
+                    </Grid>
+                  </Grid>
+                  <Grid container>
+                    <Grid item xs={4} sm={3} md={4} lg={3}>
+                      <Typography variant="body1" sx={{
+                        marginTop: "10px",
+                        opacity: (effects.length > 0 && !effects[parseInt(selectedEffect)].disabled_channels.includes(7)) ? 1 : 0.2
+                      }}>Effect Adjust 2</Typography>
+                    </Grid>
+                    <Grid item xs={8} sm={9} md={8} lg={9}>
+                      <Slider
+                        value={adjustB}
+                        onChange={(event, newValue) => setAdjustB(newValue)}
+                        color="primary"
+                        sx={{marginTop: "7px"}}
+                        disabled={!(effects.length > 0 && !effects[parseInt(selectedEffect)].disabled_channels.includes(7))}
+                      />
+                    </Grid>
+                  </Grid>
                 </Grid>
               </Grid>
-              <Grid container>
-                <Grid item xs={4} sm={3} md={4} lg={3}>
-                  <Typography variant="body1" sx={{
-                    marginTop: "10px",
-                    opacity: (effects.length > 0 && !effects[parseInt(selectedEffect)].disabled_channels.includes(7)) ? 1 : 0.2
-                  }}>Effect Adjust 2</Typography>
-                </Grid>
-                <Grid item xs={8} sm={9} md={8} lg={9}>
-                  <Slider
-                    value={adjustB}
-                    onChange={(event, newValue) => setAdjustB(newValue)}
-                    color="primary"
-                    sx={{marginTop: "7px"}}
-                    disabled={!(effects.length > 0 && !effects[parseInt(selectedEffect)].disabled_channels.includes(7))}
-                  />
+              <Grid container sx={{marginTop: 2}}>
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <TextField 
+                      label="Preset Name"
+                      variant="outlined"
+                      helperText="Optional"
+                      value={presetName}
+                      onChange={(event) => setPresetName(event.target.value)}
+                    />
+                  </FormControl>
                 </Grid>
               </Grid>
-            </Grid>
-          </Grid>
-          <Grid container sx={{marginTop: 2}}>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <TextField 
-                  label="Preset Name"
-                  variant="outlined"
-                  helperText="Optional"
-                  value={presetName}
-                  onChange={(event) => setPresetName(event.target.value)}
-                />
-              </FormControl>
-            </Grid>
-          </Grid>
-          <Grid container sx={{marginTop: 2}}>
-            <Grid item xs={6}>
-              {preset ? <Button color="error" variant="outlined" onClick={onDelete}>Delete</Button> : null}
-            </Grid>
-            <Grid item xs={6} sx={{display: "flex", justifyContent: "flex-end"}}>
-              <Button color="secondary" onClick={() => navigate("/presets")} sx={{marginRight: "10px"}}>Cancel</Button>
-              <Button variant="contained" onClick={onSave} sx={{marginRight: "10px"}}>Save</Button>
-            </Grid>
-          </Grid>
+              <Grid container sx={{marginTop: 2}}>
+                <Grid item xs={6}>
+                  {preset ? <Button color="error" variant="outlined" onClick={onDelete}>Delete</Button> : null}
+                </Grid>
+                <Grid item xs={6} sx={{display: "flex", justifyContent: "flex-end"}}>
+                  <Button color="secondary" onClick={() => navigate("/presets")} sx={{marginRight: "10px"}}>Cancel</Button>
+                  <Button variant="contained" onClick={onSave} sx={{marginRight: "10px"}}>Save</Button>
+                </Grid>
+              </Grid>
+            </>
+          ) : (
+            <Typography variant="body1" sx={{color: "grey"}}>Loading...</Typography>
+          )}
         </Paper>
       </div>
     </>
